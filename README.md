@@ -6,8 +6,11 @@ Hyperledger Fabric SDK for node.js Samples
 ## Function List
   - Enroll Admin User
   - Register User (optional)
-  - Install Chaincode
-  - Instantiate Chaincode
+  - Create Channel
+  - Join Peers to Channel
+  - Query Channel
+  - Install Chaincode on Peers
+  - Instantiate Chaincode on Channel
      - Endorsement Policy
   -	Upgrade Chaincode
      - Endorsement Policy
