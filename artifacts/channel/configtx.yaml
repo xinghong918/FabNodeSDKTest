@@ -1,0 +1,23 @@
+Profiles:
+    ObcsChannelCreatProfile:
+        Consortium: SampleConsortium
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *DetroitAuto
+                - *SamDealer
+                - *JudeDealer
+
+
+Organizations:
+    - &DetroitAuto
+        Name: DetroitAuto
+
+    - &SamDealer
+        Name: SamDealer
+
+    - &JudeDealer
+        Name: JudeDealer
+
+Application: &ApplicationDefaults
+    Organizations:

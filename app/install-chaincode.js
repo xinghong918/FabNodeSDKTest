@@ -12,16 +12,16 @@ var logger = log4js.getLogger('Install-Chaincode');
 logger.setLevel('DEBUG');
 
 
-var installChaincode = function (channelName, peerURLs, orderURL, chaincodePath, chaincodeName, chaincodeVersion, 
+var installChaincode = function (peerURLs, orderURL, chaincodePath, chaincodeName, chaincodeVersion, 
 		adminUser, mspID, adminCerts) {
 	logger.info('============ Install chaincode on organizations ============');
 	// setup Chaincode Deploy
 	process.env.GOPATH = path.join(__dirname, Fabric_Client.getConfigSetting('CC_SRC_PATH'));
 
 	var client = new Fabric_Client();
-	var channel = client.newChannel(channelName);
+//	var channel = client.newChannel(channelName);
 	var order = client.newOrderer(orderURL);
-	channel.addOrderer(order);
+//	channel.addOrderer(order);
 	// No TLS
 	let targets = [];
 	for (let i = 0; i < peerURLs.length; i++) {

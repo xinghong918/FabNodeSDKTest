@@ -1,9 +1,9 @@
 'use strict';
 /*
-* Copyright IBM Corp All Rights Reserved
-*
-* SPDX-License-Identifier: Apache-2.0
-*/
+ * Copyright IBM Corp All Rights Reserved
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 /*
  * Chaincode query
  */
@@ -33,7 +33,7 @@ var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, a
 	// peer.setName('peer1');
 	var peer = client.newPeer(peerURL);
 	channel.addPeer(peer);
-	
+
 
 	//
 	var member_user = null;
@@ -51,7 +51,9 @@ var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, a
 			var crypto_suite = Fabric_Client.newCryptoSuite();
 			// use the same location for the state store (where the users' certificate are kept)
 			// and the crypto store (where the users' keys are kept)
-			var crypto_store = Fabric_Client.newCryptoKeyStore({ path: store_path });
+			var crypto_store = Fabric_Client.newCryptoKeyStore({
+				path: store_path
+			});
 			crypto_suite.setCryptoKeyStore(crypto_store);
 			client.setCryptoSuite(crypto_suite);
 
@@ -97,4 +99,70 @@ var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, a
 };
 
 
+var getChainInfo = function (channelName, peerURL, adminUser) {
+	logger.info('============ Query ChainInfo: '+channelName+' ============');
+	//
+	var client = new Fabric_Client();
+	var channel = client.newChannel(channelName);
+	var peer = client.newPeer(peerURL);
+//	var order = client.newOrderer(orderURL);
+//	channel.addOrderer(order);
+	channel.addPeer(peer);
+
+	var member_user = null;
+	var store_path = Fabric_Client.getConfigSetting('keyValueStore');
+	logger.info('Store path:' + store_path);
+
+	return new Promise((resolve, reject) => {
+		Fabric_Client.newDefaultKeyValueStore({
+			path: store_path
+		}).then((state_store) => {
+			// assign the store to the fabric client
+			client.setStateStore(state_store);
+			var crypto_suite = Fabric_Client.newCryptoSuite();
+			// use the same location for the state store (where the users' certificate are kept)
+			// and the crypto store (where the users' keys are kept)
+			var crypto_store = Fabric_Client.newCryptoKeyStore({
+				path: store_path
+			});
+			crypto_suite.setCryptoKeyStore(crypto_store);
+			client.setCryptoSuite(crypto_suite);
+
+			// get the enrolled user from persistence, this user will sign all requests
+			return client.getUserContext(adminUser, true);
+		}).then((user_from_store) => {
+			if (user_from_store && user_from_store.isEnrolled()) {
+				logger.info('Successfully loaded ' + adminUser + ' from persistence');
+				member_user = user_from_store;
+			} else {
+				throw new Error('Failed to get ' + adminUser + '.... run registerUser.js');
+			}
+
+			return channel.queryInfo(peer);
+		}).then((blockchainInfo) => {
+			if (blockchainInfo) {
+				// FIXME: Save this for testing 'getBlockByHash'  ?
+				logger.debug('===========================================');
+				logger.debug(blockchainInfo.currentBlockHash);
+				logger.debug('===========================================');
+				//logger.debug(blockchainInfo);
+				resolve(blockchainInfo);
+			} else {
+				throw new Error('response_payloads is null');
+			}
+		}, (err) => {
+			let errMsg = 'Failed to query Chain Info due to error: ' + err.stack ? err.stack :err;
+			logger.error(errMsg);
+			return errMsg;
+		}).catch((err) => {
+			let errMsg = 'Failed to query Chain Info with error:' + err.stack ? err.stack : err;
+			logger.error(errMsg);
+			reject(errMsg);
+		});
+	});
+};
+
+
+
 exports.queryChaincode = queryChaincode;
+exports.getChainInfo = getChainInfo;

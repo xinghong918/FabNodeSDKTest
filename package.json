@@ -10,7 +10,9 @@
         "fabric-ca-client": "^1.0.2",
         "fabric-client": "^1.0.2",
         "fs-extra": "^2.0.0",
-        "log4js": "^0.6.38"
+        "log4js": "^0.6.38",
+        "request": "^2.81.0",
+        "request-promise-native": "^1.0.4"
     },
     "author": "Cathy Xing",
     "license": "Apache-2.0",
