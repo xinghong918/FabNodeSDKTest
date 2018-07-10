@@ -13,18 +13,33 @@ var logger = log4js.getLogger('Instantiate-Chaincode');
 logger.setLevel('DEBUG');
 
 var instantiateChaincode = function (channelName, peerURLs, orderURL, chaincodeName, chaincodeVersion, functionName, 
-		args, endorsementPolicy, adminUser, mspID, adminCerts) {
+		args, endorsementPolicy, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile) {
 	logger.info('============ Instantiate chaincode on organization ============');
 
 	var client = new Fabric_Client();
 	var channel = client.newChannel(channelName);
-	var order = client.newOrderer(orderURL);
-	channel.addOrderer(order);
-	// No TLS
+	// TLS
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
+	}
 	for (let i = 0; i < peerURLs.length; i++) {
-		var peer = client.newPeer(peerURLs[i]);
+		var peer = client.newPeer(peerURLs[i], opt);
 		channel.addPeer(peer);
 	}
+	
+	opt = null;
+	if (orderTlsPemFile) {
+		let dataPem = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), orderTlsPemFile));
+		opt = {
+			pem: Buffer.from(dataPem).toString()
+		};
+	}
+	var order = client.newOrderer(orderURL, opt)
+	channel.addOrderer(order);
 
 	var tx_id = null;
 	var store_path = Fabric_Client.getConfigSetting('keyValueStore');

@@ -17,21 +17,24 @@ var fs = require('fs-extra');
 var logger = log4js.getLogger('Query');
 logger.setLevel('DEBUG');
 
-var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, adminUser) {
-
+var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, adminUser, peerTlsPemFile) {
 	logger.info('============ Query chaincode ============');
 	//
 	var client = new Fabric_Client();
 	// setup the fabric network
 	var channel = client.newChannel(channelName);
+	var peer;
 	// endable TLS
-	// let data = fs.readFileSync(path.join(__dirname, 'hfc-key-store/ca.crt'));
-	// var peer = client.newPeer('grpcs://localhost:7051', {
-	// 	pem: Buffer.from(data).toString(),
-	// 	'ssl-target-name-override': 'peer0.org1.example.com'
-	// });
-	// peer.setName('peer1');
-	var peer = client.newPeer(peerURL);
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		var peer = client.newPeer(peerURL, {
+			pem: Buffer.from(data).toString()
+		});
+		//	peer.setName('peer0-1');
+	} else {
+		peer = client.newPeer(peerURL);
+	}
+
 	channel.addPeer(peer);
 
 
@@ -99,14 +102,19 @@ var queryChaincode = function (channelName, peerURL, chaincodeName, fcn, args, a
 };
 
 
-var getChainInfo = function (channelName, peerURL, adminUser) {
-	logger.info('============ Query ChainInfo: '+channelName+' ============');
-	//
+var getChainInfo = function (channelName, peerURL, adminUser, peerTlsPemFile) {
+	logger.info('============ Query ChainInfo: ' + channelName + ' ============');
 	var client = new Fabric_Client();
 	var channel = client.newChannel(channelName);
-	var peer = client.newPeer(peerURL);
-//	var order = client.newOrderer(orderURL);
-//	channel.addOrderer(order);
+	// TLS
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
+	}
+	var peer = client.newPeer(peerURL, opt);
 	channel.addPeer(peer);
 
 	var member_user = null;
@@ -151,7 +159,7 @@ var getChainInfo = function (channelName, peerURL, adminUser) {
 				throw new Error('response_payloads is null');
 			}
 		}, (err) => {
-			let errMsg = 'Failed to query Chain Info due to error: ' + err.stack ? err.stack :err;
+			let errMsg = 'Failed to query Chain Info due to error: ' + err.stack ? err.stack : err;
 			logger.error(errMsg);
 			return errMsg;
 		}).catch((err) => {

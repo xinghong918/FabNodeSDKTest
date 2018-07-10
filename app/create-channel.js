@@ -13,16 +13,32 @@ var configtxlator = require('./configtxlator.js');
 var logger = log4js.getLogger('Create-Channel');
 logger.setLevel('DEBUG');
 
-var createChannel = function (channelName, peerURL, orderURL, channelConfigPath, adminUser, mspID, adminCerts) {
+var createChannel = function (channelName, peerURL, orderURL, channelConfigPath, adminUser, mspID, 
+                              adminCerts, peerTlsPemFile, orderTlsPemFile) {
     logger.info('============ Creating Channel ' + channelName + ' ============');
 
     var client = new Fabric_Client();
     var channel = client.newChannel(channelName);
-    var order = client.newOrderer(orderURL);
-    channel.addOrderer(order);
-    // No TLS
-    var peer = client.newPeer(peerURL);
-    channel.addPeer(peer);
+    // TLS
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
+	}
+	var peer = client.newPeer(peerURL, opt);
+	channel.addPeer(peer);
+	
+	opt = null;
+	if (orderTlsPemFile) {
+		let dataPem = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), orderTlsPemFile));
+		opt = {
+			pem: Buffer.from(dataPem).toString()
+		};
+	}
+	var order = client.newOrderer(orderURL, opt)
+	channel.addOrderer(order);
 
     var member_user = null;
     var store_path = Fabric_Client.getConfigSetting('keyValueStore');
@@ -235,7 +251,7 @@ var updateCreateChannelBlockACL = function(blockPath, policies, cur_mspId){
     } else {
         return Promise.resolve(block);
     }
-}
+};
 
 
 exports.createChannel = createChannel;

@@ -12,20 +12,37 @@ var Fabric_Client = require('fabric-client');
 var path = require('path');
 var util = require('util');
 var os = require('os');
+var fs = require('fs-extra');
 var logger = log4js.getLogger('Invoke');
 logger.setLevel('DEBUG');
 
-var invokeChaincode = function (channelName, peerURLs, orderURL, eventURL, chaincodeName, fcn, args, adminUser) {
+var invokeChaincode = function (channelName, peerURLs, orderURL, eventURL, chaincodeName, fcn, args, adminUser,
+	peerTlsPemFile, orderTlsPemFile) {
 	//
 	var client = new Fabric_Client();
 
 	// setup the fabric network
 	var channel = client.newChannel(channelName);
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
+	}
 	for (let i = 0; i < peerURLs.length; i++) {
-		var peer = client.newPeer(peerURLs[i]);
+		var peer = client.newPeer(peerURLs[i], opt);
 		channel.addPeer(peer);
 	}
-	var order = client.newOrderer(orderURL)
+	
+	opt = null;
+	if (orderTlsPemFile) {
+		let dataPem = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), orderTlsPemFile));
+		opt = {
+			pem: Buffer.from(dataPem).toString()
+		};
+	}
+	var order = client.newOrderer(orderURL, opt)
 	channel.addOrderer(order);
 
 	//
@@ -108,7 +125,13 @@ var invokeChaincode = function (channelName, peerURLs, orderURL, eventURL, chain
 				// get an eventhub once the fabric client has a user assigned. The user
 				// is required bacause the event registration must be signed
 				let event_hub = client.newEventHub();
-				event_hub.setPeerAddr(eventURL);
+
+				var opt = {};
+				if (peerTlsPemFile) {
+					let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+					opt.pem = Buffer.from(data).toString();
+				}
+				event_hub.setPeerAddr(eventURL, opt);
 
 				// using resolve the promise so that result status may be processed
 				// under the then clause rather than having the catch clause process

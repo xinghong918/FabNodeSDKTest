@@ -12,30 +12,33 @@ var logger = log4js.getLogger('Install-Chaincode');
 logger.setLevel('DEBUG');
 
 
-var installChaincode = function (peerURLs, orderURL, chaincodePath, chaincodeName, chaincodeVersion, 
-		adminUser, mspID, adminCerts) {
+var installChaincode = function (peerURLs, chaincodePath, chaincodeName, chaincodeVersion,
+	adminUser, mspID, adminCerts, peerTlsPemFile) {
 	logger.info('============ Install chaincode on organizations ============');
 	// setup Chaincode Deploy
 	process.env.GOPATH = path.join(__dirname, Fabric_Client.getConfigSetting('CC_SRC_PATH'));
 
 	var client = new Fabric_Client();
-//	var channel = client.newChannel(channelName);
-	var order = client.newOrderer(orderURL);
-//	channel.addOrderer(order);
-	// No TLS
 	let targets = [];
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
+	}
 	for (let i = 0; i < peerURLs.length; i++) {
-		let peer = client.newPeer(peerURLs[i]);
+		let peer = client.newPeer(peerURLs[i], opt);
 		targets.push(peer);
 	}
-	
+
 
 	var store_path = Fabric_Client.getConfigSetting('keyValueStore');
 	logger.info('Store path:' + store_path);
 
 
 	// create the key value store as defined in the fabric-client/config/default.json 'key-value-store' setting
-	return new Promise( (resolve, reject) => {
+	return new Promise((resolve, reject) => {
 		var keyPath = path.join(__dirname, Fabric_Client.getConfigSetting('adminPath'), adminCerts.key);
 		let keyData = fs.readFileSync(keyPath);
 		var keyPEM = Buffer.from(keyData).toString();
@@ -44,7 +47,7 @@ var installChaincode = function (peerURLs, orderURL, chaincodePath, chaincodeNam
 		var certPEM = certData.toString();
 
 		var cryptoSuite = Fabric_Client.newCryptoSuite();
-		cryptoSuite.setCryptoKeyStore(Fabric_Client.newCryptoKeyStore({path: store_path }));
+		cryptoSuite.setCryptoKeyStore(Fabric_Client.newCryptoKeyStore({ path: store_path }));
 		client.setCryptoSuite(cryptoSuite);
 
 

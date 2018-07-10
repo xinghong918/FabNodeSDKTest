@@ -12,20 +12,34 @@ var fs = require('fs');
 var logger = log4js.getLogger('Join-Channel');
 logger.setLevel('DEBUG');
 
-var joinChannel = function (channelName, peerURLs, orderURL, adminUser, mspID, adminCerts) {
+var joinChannel = function (channelName, peerURLs, orderURL, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile) {
 	logger.info('============ Join Channel ' + channelName + ' ============');
 
 	var client = new Fabric_Client();
 	var channel = client.newChannel(channelName);
-	var order = client.newOrderer(orderURL);
-	channel.addOrderer(order);
-	// No TLS
+	// TLS
 	var targets = [];
-	for (let i = 0; i < peerURLs.length; i++) {
-		let peer = client.newPeer(peerURLs[i]);
-		targets.push(peer);
-	//	channel.addPeer(peer);
+	var opt;
+	if (peerTlsPemFile) {
+		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
+		opt = {
+			pem: Buffer.from(data).toString()
+		};
 	}
+	for (let i = 0; i < peerURLs.length; i++) {
+		let peer = client.newPeer(peerURLs[i], opt);
+		targets.push(peer);
+	}
+
+	opt = null;
+	if (orderTlsPemFile) {
+		let dataPem = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), orderTlsPemFile));
+		opt = {
+			pem: Buffer.from(dataPem).toString()
+		};
+	}
+	var order = client.newOrderer(orderURL, opt)
+	channel.addOrderer(order);
 
 	var member_user = null;
 	var tx_id = null;

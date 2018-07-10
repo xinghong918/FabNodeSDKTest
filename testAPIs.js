@@ -70,9 +70,9 @@ var _main = function () {
                     "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
                     "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
                 };
-                // function(peerURLs, orderURL, chaincodePath, chaincodeName, chaincodeVersion, adminUser, mspID, adminCerts)
+                // function(peerURLs, chaincodePath, chaincodeName, chaincodeVersion, adminUser, mspID, adminCerts)
                 installCC.installChaincode(['grpc://localhost:10000'],
-                    'grpc://localhost:7000', 'github.com/example_cc',
+                    'github.com/example_cc',
                     'mycc', 'v0', 'admin', 'DetroitAuto', adminCerts).then(resolve, reject);
                 break;
                 // Instantiate Chaincode

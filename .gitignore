@@ -6,3 +6,6 @@ hfc-key-store/*
 .DS_Store
 Thumbs.db
 package-lock.json
+
+testAPIs_cust.js
+config.json
