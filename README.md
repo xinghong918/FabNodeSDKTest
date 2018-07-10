@@ -1,7 +1,7 @@
 # FabNodeSDKTest
-Hyperledger Fabric SDK for node.js Samples
+Hyperledger Fabric SDK v1.0.5 for node.js Samples
 
-### npm install
+### sh npm_bcs_client.sh
 
 ## Function List
   - Enroll Admin User
