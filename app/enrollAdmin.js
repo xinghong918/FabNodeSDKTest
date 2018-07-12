@@ -14,11 +14,12 @@ var Fabric_CA_Client = require('fabric-ca-client');
 var path = require('path');
 var util = require('util');
 var os = require('os');
+var fs = require('fs-extra');
 var logger = log4js.getLogger('EnrollAdmin');
 logger.setLevel('DEBUG');
 
 //
-var getAdminUser = function (userName, mspid, ca_url) {
+var getAdminUser = function (userName, mspid, ca_url, tlsPemFile) {
     var client = new Fabric_Client();
     var fabric_ca_client = null;
     var admin_user = null;
@@ -43,6 +44,14 @@ var getAdminUser = function (userName, mspid, ca_url) {
                 trustedRoots: [],
                 verify: false
             };
+
+            if(tlsPemFile){
+                let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), tlsPemFile));
+                tlsOptions.trustedRoots.push(data);
+                tlsOptions.verify = true;
+            }
+            
+
             // be sure to change the http to https when the CA is running TLS enabled
             fabric_ca_client = new Fabric_CA_Client(ca_url, tlsOptions, '', crypto_suite);
             //    fabric_ca_client = new Fabric_CA_Client('https://localhost:7054', null /*defautl TLS opts*/, '' /* default CA */, crypto_suite);
