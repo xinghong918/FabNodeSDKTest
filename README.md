@@ -16,5 +16,6 @@ Hyperledger Fabric SDK v1.0.5 for node.js Samples
      - Endorsement Policy
   -	Invoke Transaction 
   -	Query Chaincode
+  - Chaincode Event
 
 ### e.g. node testAPIs.js enrollAdminUser
