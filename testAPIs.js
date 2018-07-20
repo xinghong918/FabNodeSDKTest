@@ -21,7 +21,7 @@ var join = require('./app/join-channel.js');
 
 /**
  * node testAPIs.js [ enrollAdminUser |  registerUser | installCC | activateCC | upgradeCC | query | invoke 
- *                  | createChannel | queryChannel | joinChannel ]
+ *                  | createChannel | queryChannel | joinChannel | ccEvent ]
  */
 var _main = function () {
     logger.info('========== Start testing ============');
@@ -33,26 +33,30 @@ var _main = function () {
     var testType = myArgs[0];
     loadConfigFile();
 
-    let endorsementPolicy = {};
-    let adminCerts = {};
+    var endorsementPolicy = {};
+    var adminCerts = {
+        "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
+        "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
+    };
+    var caURL = 'http://localhost:32768';
 
     new Promise((resolve, reject) => {
         switch (testType) {
             //  Enroll user: Admin
             case 'enrollAdminUser':
                 // function(userName, mspid, ca_url) 
-                enrollAdmin.getAdminUser('admin', 'DetroitAuto', 'http://localhost:32768').then(resolve, reject);
+                enrollAdmin.getAdminUser('admin', 'DetroitAuto', caURL).then(resolve, reject);
                 break;
                 // Register User
             case 'registerUser':
-                enrollAdmin.getAdminUser('admin', 'DetroitAuto', 'http://localhost:32768').then(() => {
+                enrollAdmin.getAdminUser('admin', 'DetroitAuto', caURL).then(() => {
                     // function(userName, mspid, ca_url) 
-                    registerUser.getRegisteredUser('cathy', 'DetroitAuto', 'http://localhost:32768');
+                    registerUser.getRegisteredUser('cathy', 'DetroitAuto', caURL);
                 }).then(resolve, reject);
                 break;
                 // Query Chaincode
             case 'query':
-                enrollAdmin.getAdminUser('admin', 'DetroitAuto', 'http://localhost:32768').then(() => {
+                enrollAdmin.getAdminUser('admin', 'DetroitAuto', caURL).then(() => {
                     // function(channelName, peerURL, chaincodeName, fcn, args, adminUser)
                     query.queryChaincode('samchannel', 'grpc://localhost:10000', 'mycc', 'query', ['a'], 'admin').then(resolve, reject);
                 });
@@ -66,10 +70,6 @@ var _main = function () {
                 break;
                 // Install Chaincode
             case 'installCC':
-                adminCerts = {
-                    "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
-                    "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
-                };
                 // function(peerURLs, chaincodePath, chaincodeName, chaincodeVersion, adminUser, mspID, adminCerts)
                 installCC.installChaincode(['grpc://localhost:10000'],
                     'github.com/example_cc',
@@ -99,10 +99,7 @@ var _main = function () {
                         }]
                     }
                 };
-                adminCerts = {
-                    "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
-                    "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
-                };
+                
                 /*
                  *  function(channelName, peerURLs, orderURL, chaincodeName, chaincodeVersion, functionName, 
                  *           args, endorsementPolicy, adminUser, mspID, adminCerts)
@@ -134,10 +131,6 @@ var _main = function () {
                         }]
                     }
                 };
-                adminCerts = {
-                    "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
-                    "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
-                };
                 /*
                  * function(channelName, [peer0URL, peer1URL], orderURL, chaincodeName, chaincodeVersion, functionName, 
                  *           args, endorsementPolicy, adminUser, mspID, adminCerts)
@@ -147,10 +140,6 @@ var _main = function () {
                 break;
                 // Create Channels
             case 'createChannel':
-                adminCerts = {
-                    "key": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_key",
-                    "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
-                };
                 let txPath = '../artifacts/channel/channel.tx',
                     mspID = 'DetroitAuto';
                 let policy = {
@@ -183,13 +172,16 @@ var _main = function () {
                 break;
                 // join Channel
             case 'joinChannel':
-                adminCerts = {
-                    "key": "sam.com/users/Admin@sam.com/msp/SamDealer_key",
-                    "cert": "sam.com/users/Admin@sam.com/msp/SamDealer_cert.pem"
-                };
                 // function(channelName, peerURLs, orderURL, adminUser, mspID, adminCerts)
-                join.joinChannel('samchannel', ['grpc://localhost:10006', 'grpc://localhost:10009'], 'grpc://localhost:7000',
-                    'admin', 'SamDealer', adminCerts).then(resolve, reject);
+                join.joinChannel('samchannel', ['grpc://localhost:10003'], 'grpc://localhost:7000',
+                    'admin', 'DetroitAuto', adminCerts).then(resolve, reject);
+                break;
+            // Chaincode Event
+            case 'ccEvent':
+                // function (channelName, peerURLs, orderURL, eventURL, chaincodeName, eventName, adminUser,
+	            //           peerTlsPemFile, orderTlsPemFile)
+                ccEvent.chaincodeEvent('samchannel', ['grpc://localhost:10000'], 'grpc://localhost:7000', 'grpc://localhost:10002',
+                    'myChaincode', 'testEvent', 'admin').then(resolve, reject);
                 break;
             default:
                 resolve();

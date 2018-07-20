@@ -75,6 +75,8 @@ func (t *MyChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 		return t.getCertificate(stub, args)
 	} else if function == "testRESTCC" { // test REST
 		return t.testRESTCC(stub, args)
+	} else if function == "fireCCEvent" { // Fire Chaincode Event
+		return t.fireCCEvent(stub, args)
 	}
 
 	fmt.Println("invoke did not find func: " + function) //error
@@ -538,7 +540,10 @@ func (t *MyChaincode) getCertificate(stub shim.ChaincodeStubInterface, args []st
 		fmt.Errorf("ParseCertificate failed")
 	}
 	uname := cert.Subject.CommonName
-	fmt.Println("Name:" + uname)
+	// orgArr := cert.Issuer.Organization
+	// mspname := strings.Join(orgArr,", ")
+//	issuer := cert.Issuer.CommonName
+//	fmt.Println("Name:" + uname)
 	return shim.Success([]byte("Called testCertificate " + uname))
 }
 
@@ -558,6 +563,26 @@ func (t *MyChaincode) testRESTCC(stub shim.ChaincodeStubInterface, args []string
 	fmt.Println("testRESTCC response msg:", string(body))
 	return shim.Success([]byte(body))
 }
+
+
+func (t *MyChaincode) fireCCEvent(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	var value []byte
+	if len(args) == 0 {
+	    value = []byte("Defaulting")
+	}else{
+		value = []byte(args[0])
+	}
+	fmt.Println("fireCCEvent value:", string(value))
+	//Write the value to our eventKey
+	err := stub.PutState("eventKey", value);
+	if err != nil {
+		shim.Error("Error writing to the event key!")
+	}
+
+	stub.SetEvent("testEvent", value)
+	return shim.Success(value)
+}
+
 
 func createIndexHelper(stub shim.ChaincodeStubInterface, demoAsset *DemoAsset) error {
 	var err error = nil

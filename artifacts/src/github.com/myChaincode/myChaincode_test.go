@@ -300,3 +300,21 @@ func updateAsset(t *testing.T, stub *shim.MockStub, demoAsset DemoAsset) {
 		t.Errorf("Update asset returned non-OK status, got: %d, want: %d.", invokeResult.Status, 200)
 	}
 }
+
+
+func TestFireCCEvent(t *testing.T) {
+	stub := shim.NewMockStub("mockChaincodeStub", new(MyChaincode))
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+	t.Log("************ Test fireCCEvent ****************")
+
+	// fireCCEvent
+	invokeFunc := "fireCCEvent"
+	args := [][]byte{[]byte(invokeFunc), []byte("Event body")}
+	invokeResult := stub.MockInvoke("12345", args)
+	if invokeResult.Status != 200 {
+		t.Errorf("fireCCEvent returned non-OK status, got: %d, want: %d.", invokeResult.Status, 200)
+	}
+	t.Log("fireCCEvent invokeResult.Payload: " + string(invokeResult.Payload))
+}
