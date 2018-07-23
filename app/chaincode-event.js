@@ -12,34 +12,9 @@ var log4js = require('log4js');
 var logger = log4js.getLogger('CCEvent');
 logger.setLevel('DEBUG');
 
-var chaincodeEvent = function (channelName, peerURLs, orderURL, eventURL, chaincodeName, eventName, adminUser,
-	peerTlsPemFile, orderTlsPemFile) {
+var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, peerTlsPemFile) {
 	//
 	var client = new Fabric_Client();
-
-	// setup the fabric network
-	var channel = client.newChannel(channelName);
-	var opt;
-	if (peerTlsPemFile) {
-		let data = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), peerTlsPemFile));
-		opt = {
-			pem: Buffer.from(data).toString()
-		};
-	}
-	for (let i = 0; i < peerURLs.length; i++) {
-		var peer = client.newPeer(peerURLs[i], opt);
-		channel.addPeer(peer);
-	}
-
-	opt = null;
-	if (orderTlsPemFile) {
-		let dataPem = fs.readFileSync(path.join(Fabric_Client.getConfigSetting('keyValueStore'), orderTlsPemFile));
-		opt = {
-			pem: Buffer.from(dataPem).toString()
-		};
-	}
-	var order = client.newOrderer(orderURL, opt)
-	channel.addOrderer(order);
 
 	//
 	var member_user = null;
@@ -85,7 +60,7 @@ var chaincodeEvent = function (channelName, peerURLs, orderURL, eventURL, chainc
 
 			let handle = event_hub.registerChaincodeEvent(chaincodeName, eventName, (event, block_num, tx_id, status) => {
 				logger.info("Chaincode event happened!");
-					logger.info("Event:" +JSON.stringify(event, null, 2));
+			//	logger.info("Event:" +JSON.stringify(event, null, 2));
 				logger.info("From chaincode_id: " + event.chaincode_id + ", tx_id: " + event.tx_id + ", event_name: " + event.event_name);
 				logger.info("Payload Data: " + event.payload.toString() );
 

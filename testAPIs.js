@@ -178,10 +178,8 @@ var _main = function () {
                 break;
             // Chaincode Event
             case 'ccEvent':
-                // function (channelName, peerURLs, orderURL, eventURL, chaincodeName, eventName, adminUser,
-	            //           peerTlsPemFile, orderTlsPemFile)
-                ccEvent.chaincodeEvent('samchannel', ['grpc://localhost:10000'], 'grpc://localhost:7000', 'grpc://localhost:10002',
-                    'myChaincode', 'testEvent', 'admin').then(resolve, reject);
+                // function (eventURL, chaincodeName, eventName, adminUser, peerTlsPemFile)
+                ccEvent.chaincodeEvent('grpc://localhost:10002','myChaincode', 'testEvent', 'admin').then(resolve, reject);
                 break;
             default:
                 resolve();
