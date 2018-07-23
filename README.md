@@ -17,5 +17,6 @@ Hyperledger Fabric SDK v1.0.5 for node.js Samples
   -	Invoke Transaction 
   -	Query Chaincode
   - Chaincode Event
+  - Block Event
 
 ### e.g. node testAPIs.js enrollAdminUser
