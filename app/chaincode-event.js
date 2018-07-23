@@ -17,10 +17,8 @@ var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, pe
 	var client = new Fabric_Client();
 
 	//
-	var member_user = null;
 	var store_path = Fabric_Client.getConfigSetting('keyValueStore');
 	logger.info('Store path:' + store_path);
-	var tx_id = null;
 
 	return new Promise((resolve, reject) => {
 		// create the key value store as defined in the fabric-client/config/default.json 'key-value-store' setting
@@ -43,7 +41,6 @@ var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, pe
 		}).then((user_from_store) => {
 			if (user_from_store && user_from_store.isEnrolled()) {
 				logger.info('Successfully loaded ' + adminUser + ' from persistence');
-				member_user = user_from_store;
 			} else {
 				throw new Error('Failed to get ' + adminUser + '.... run registerUser.js');
 			}
@@ -60,28 +57,13 @@ var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, pe
 
 			let handle = event_hub.registerChaincodeEvent(chaincodeName, eventName, (event, block_num, tx_id, status) => {
 				logger.info("Chaincode event happened!");
-			//	logger.info("Event:" +JSON.stringify(event, null, 2));
+				//	logger.info("Event:" +JSON.stringify(event, null, 2));
 				logger.info("From chaincode_id: " + event.chaincode_id + ", tx_id: " + event.tx_id + ", event_name: " + event.event_name);
-				logger.info("Payload Data: " + event.payload.toString() );
-
-				// Event form:
-				// {
-				// 	"chaincode_id": "mycc1",
-				// 	"tx_id": "d215b7365af534b40d7bbc443099ccc977c2eb34974777319f99a0523e61674b",
-				// 	"event_name": "testEvent",
-				// 	"payload": {
-				// 	  "type": "Buffer",
-				// 	  "data": [
-				// 		115,
-				// 		115,
-				// 		100,
-				// 		100
-				// 	  ]
-				// 	}
-				// }
+				logger.info("Payload Data: " + event.payload.toString());
 
 				event_hub.unregisterChaincodeEvent(handle);
 				event_hub.disconnect();
+				resolve();
 			}, (err) => {
 				//this is the callback if something goes wrong with the event registration or processing
 				logger.error('There was a problem with the eventhub ::' + err);
@@ -91,10 +73,8 @@ var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, pe
 			logger.info("Connecting to event hub...");
 			event_hub.connect();
 
-		}).then((results) => {
-			resolve();
 		}).catch((err) => {
-			let errMsg = 'Failed to invoke successfully :: ' + err;
+			let errMsg = 'Failed to listen on chaincode event :: ' + err;
 			logger.error(errMsg);
 			reject(errMsg);
 		});
@@ -104,3 +84,20 @@ var chaincodeEvent = function (eventURL, chaincodeName, eventName, adminUser, pe
 };
 
 exports.chaincodeEvent = chaincodeEvent;
+
+
+// Event form:
+// {
+// 	"chaincode_id": "mycc1",
+// 	"tx_id": "d215b7365af534b40d7bbc443099ccc977c2eb34974777319f99a0523e61674b",
+// 	"event_name": "testEvent",
+// 	"payload": {
+// 	  "type": "Buffer",
+// 	  "data": [
+// 		115,
+// 		115,
+// 		100,
+// 		100
+// 	  ]
+// 	}
+// }

@@ -18,10 +18,11 @@ var instantiateCC = require('./app/instantiate-chaincode.js');
 var upgradeCC = require('./app/upgrade-chaincode.js');
 var channels = require('./app/create-channel.js');
 var join = require('./app/join-channel.js');
-
+var ccEvent = require('./app/chaincode-event.js');
+var blockEvent = require('./app/block-event.js');
 /**
  * node testAPIs.js [ enrollAdminUser |  registerUser | installCC | activateCC | upgradeCC | query | invoke 
- *                  | createChannel | queryChannel | joinChannel | ccEvent ]
+ *                  | createChannel | queryChannel | joinChannel | ccEvent | blockEvent ]
  */
 var _main = function () {
     logger.info('========== Start testing ============');
@@ -180,6 +181,11 @@ var _main = function () {
             case 'ccEvent':
                 // function (eventURL, chaincodeName, eventName, adminUser, peerTlsPemFile)
                 ccEvent.chaincodeEvent('grpc://localhost:10002','myChaincode', 'testEvent', 'admin').then(resolve, reject);
+                break;
+            // Block Event
+            case 'blockEvent':
+                // function (eventURL, adminUser, peerTlsPemFile)
+                blockEvent.blockEvent('grpc://localhost:10002', 'admin').then(resolve, reject);
                 break;
             default:
                 resolve();
