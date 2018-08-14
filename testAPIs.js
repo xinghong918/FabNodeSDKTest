@@ -40,6 +40,10 @@ var _main = function () {
         "cert": "dauto.com/users/Admin@dauto.com/msp/DetroitAuto_cert.pem"
     };
     var caURL = 'http://localhost:32768';
+    var userAttrs = [{name:"firstName",value:"Cathy",ecert:true},
+                     {name:"lastName",value:"Xing",ecert:true},
+                     {name:"department",value:"devops",ecert:true},
+                     {name:"role",value:"manager",ecert:true}];
 
     new Promise((resolve, reject) => {
         switch (testType) {
@@ -52,7 +56,7 @@ var _main = function () {
             case 'registerUser':
                 enrollAdmin.getAdminUser('admin', 'DetroitAuto', caURL).then(() => {
                     // function(userName, mspid, ca_url) 
-                    registerUser.getRegisteredUser('cathy', 'DetroitAuto', caURL);
+                    registerUser.getRegisteredUser('cathy', 'DetroitAuto', caURL, userAttrs);
                 }).then(resolve, reject);
                 break;
                 // Query Chaincode

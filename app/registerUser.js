@@ -17,7 +17,7 @@ var os = require('os');
 var logger = log4js.getLogger('RegisterUser');
 logger.setLevel('DEBUG');
 
-var getRegisteredUser = function (userName, mspid, ca_url) {
+var getRegisteredUser = function (userName, mspid, ca_url, userAttrs) {
     //
     var client = new Fabric_Client();
     var fabric_ca_client = null;
@@ -25,6 +25,13 @@ var getRegisteredUser = function (userName, mspid, ca_url) {
     var member_user = null;
     var store_path = Fabric_Client.getConfigSetting('keyValueStore');
     logger.info(' Store path:' + store_path);
+    // ABAC: user attribute
+    var userAttrReq = [];
+    if(userAttrs){
+      for(var it in userAttrs){
+        userAttrReq.push({name:it.name, optional:false});
+      }
+    }
 
     // create the key value store as defined in the fabric-client/config/default.json 'key-value-store' setting
     return new Promise((resolve, reject) => {
@@ -58,12 +65,19 @@ var getRegisteredUser = function (userName, mspid, ca_url) {
 
         // at this point we should have the admin user
         // first need to register the user with the CA server
-        return fabric_ca_client.register({ enrollmentID: userName, affiliation: 'org1.department1', role: 'client' }, admin_user);
+        let identityReq = {enrollmentID: userName, affiliation: 'org1.department1', role: 'client'};
+        if(userAttrs && userAttrs.length > 0){
+            identityReq.attrs = userAttrs;
+        }
+        return fabric_ca_client.register(identityReq, admin_user);
     }).then((secret) => {
         // next we need to enroll the user with CA server
         logger.info('Successfully registered '+userName+' - secret:' + secret);
-
-        return fabric_ca_client.enroll({ enrollmentID: userName, enrollmentSecret: secret });
+        let identityReq = {enrollmentID: userName, enrollmentSecret: secret};
+        if(userAttrReq && userAttrReq.length > 0){
+            identityReq.attr_reqs = userAttrReq;
+        }
+        return fabric_ca_client.enroll(identityReq);
     }).then((enrollment) => {
         logger.info('Successfully enrolled member user "'+userName+'" ');
         return client.createUser(
