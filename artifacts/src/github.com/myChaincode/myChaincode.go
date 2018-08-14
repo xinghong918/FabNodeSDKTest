@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,9 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/hyperledger/fabric/protos/peer"
+	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
 )
 
 type MyChaincode struct {
@@ -37,6 +41,38 @@ type DemoAsset struct {
 var AssetQueryMap = map[string]string{
 	"AssetType":  "DemoAsset~Type",
 	"AssetOwner": "DemoAsset~Owner",
+}
+
+// ACL Asset:
+// DAR Object
+type DAR struct {
+	DocID     string  `json:"docId"`
+	AclID     string  `json:"aclId"`
+	Version   string  `json:"version"`
+	DocDigest string  `json:"docDigest"`
+	Type      string  `json:"type"`
+	Fields    []Field `json:"fields"`
+}
+
+type Field struct {
+	Name  string `json:"Name"`
+	Value string `json:"Value"`
+}
+
+type ACL struct {
+	DocID       string       `json:"docId"`
+	ID          string       `json:"id"`
+	AclID       string       `json:"aclId"`
+	Owner       string       `json:"owner"`
+	Access      []string     `json:"access"`
+	Type        string       `json:"type"`
+	UsersAccess []UserAccess `json:"UsersAccess"`
+}
+
+type UserAccess struct {
+	User     string   `json:"user"`
+	CanRead  []string `json:"canRead"`
+	CanWrite []string `json:"canWrite"`
 }
 
 func main() {
@@ -77,6 +113,43 @@ func (t *MyChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 		return t.testRESTCC(stub, args)
 	} else if function == "fireCCEvent" { // Fire Chaincode Event
 		return t.fireCCEvent(stub, args)
+	} else if function == "richQuery" { // sql-based query
+		return t.richQuery(stub, args)
+	} else if function == "getABAC"	{ // query ABAC
+		return t.getABAC(stub, args)
+	}
+
+	if function == "createAcl" || function == "getAcl" || function == "updateAcl" || function == "createDar" || function == "getDar" || function == "getTxCreatorInfo" {
+		var err error
+		var message string
+
+		// Get Trx Creator
+		creator, err := stub.GetCreator()
+		if err != nil {
+			message = fmt.Sprintf("Error getting transaction creator: %s\n", err.Error())
+			fmt.Errorf(message)
+			err = errors.New(message)
+			return shim.Error(err.Error())
+		}
+
+		// Deserialize Creator Certificate
+		userOrg, userName, err := getTxCreatorInfo(creator)
+
+		if err != nil {
+			message = fmt.Sprintf("Error getting deserializing Creator Certificate: %s\n", err.Error())
+			fmt.Errorf(message)
+			err = errors.New(message)
+			return shim.Error(err.Error())
+		}
+
+		// if function == "createAcl" { // Create ACL
+		// 	return t.createAcl(stub, args, userOrg, userName)
+		// } else if function == "getAcl" {
+		// 	return t.getAcl(stub, args, userOrg, userName)
+		// } else
+		if function == "getTxCreatorInfo" {
+			return shim.Success([]byte(fmt.Sprintf("userOrg: %s, userName: %s", userOrg, userName)))
+		}
 	}
 
 	fmt.Println("invoke did not find func: " + function) //error
@@ -542,8 +615,8 @@ func (t *MyChaincode) getCertificate(stub shim.ChaincodeStubInterface, args []st
 	uname := cert.Subject.CommonName
 	// orgArr := cert.Issuer.Organization
 	// mspname := strings.Join(orgArr,", ")
-//	issuer := cert.Issuer.CommonName
-//	fmt.Println("Name:" + uname)
+	//	issuer := cert.Issuer.CommonName
+	//	fmt.Println("Name:" + uname)
 	return shim.Success([]byte("Called testCertificate " + uname))
 }
 
@@ -564,25 +637,263 @@ func (t *MyChaincode) testRESTCC(stub shim.ChaincodeStubInterface, args []string
 	return shim.Success([]byte(body))
 }
 
-
 func (t *MyChaincode) fireCCEvent(stub shim.ChaincodeStubInterface, args []string) peer.Response {
 	var value []byte
 	if len(args) == 0 {
-	    value = []byte("Defaulting")
-	}else{
+		value = []byte("Defaulting")
+	} else {
 		value = []byte(args[0])
 	}
 	fmt.Println("fireCCEvent value:", string(value))
 	//Write the value to our eventKey
-	err := stub.PutState("eventKey", value);
-	if err != nil {
-		shim.Error("Error writing to the event key!")
-	}
+	//	err := stub.PutState("eventKey", value)
+	// if err != nil {
+	// 	shim.Error("Error writing to the event key!")
+	// }
 
 	stub.SetEvent("testEvent", value)
 	return shim.Success(value)
 }
 
+/*
+func (t *MyChaincode) createAcl(stub shim.ChaincodeStubInterface, args []string, userOrg string, userName string) peer.Response {
+	var message string
+	var err error
+	var acl *ACL
+
+	if len(args) != 1 {
+		message = "invalid number of args, expecting one arg for ACL"
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return shim.Error(err.Error())
+	}
+
+	err = json.Unmarshal([]byte(args[0]), &acl)
+
+	if err != nil {
+
+		message = fmt.Sprintf("Error Unmarsheling input param %s. Error details %d", args[0], err.Error())
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return shim.Error(err.Error())
+	}
+
+	acl.Owner = userOrg + "." + userName
+	acl.Type = "ACL"
+
+	aclJSON, err := json.Marshal(acl)
+
+	if err != nil {
+
+		message = fmt.Sprintf("Error marsheling acl with ID %s. Error details %d", acl.AclID, err.Error())
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutState(acl.AclID, aclJSON)
+	if err != nil {
+		message := fmt.Sprintf("Error Creating ACL with ID %s\n. Error details %d", acl.AclID, err.Error())
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return shim.Error(err.Error())
+	}
+
+	return shim.Success([]byte(aclJSON))
+}
+
+func (t *MyChaincode) getAcl(stub shim.ChaincodeStubInterface, args []string, userOrg string, userName string) peer.Response {
+	var aclBytes []byte
+	var err error
+	var message, aclOwner string
+	var aclId string
+	var acl ACL
+
+	if len(args) != 1 {
+		message = "invalid number of args, expecting one arg for ACL ID"
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return shim.Error(err.Error())
+	}
+
+	aclId = args[0]
+	acl, err = getAclById(stub, aclId)
+
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	aclOwner = userOrg + "." + userName
+
+	if acl.Owner != aclOwner {
+		acl.Owner = ""
+	}
+
+	aclBytes, err = json.Marshal(acl)
+
+	return shim.Success(aclBytes)
+}
+
+func getAclById(stub shim.ChaincodeStubInterface, aclId string) (ACL, error) {
+
+	var err error
+	var message string
+	var acl ACL = ACL{}
+	var aclBytes []byte
+
+	aclBytes, err = stub.GetState(aclId)
+	if err != nil {
+		message = fmt.Sprintf("Error getting ACL with ID: %s\n", aclId)
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return acl, err
+	}
+
+	if aclBytes == nil {
+		message = fmt.Sprintf("No ACL exists with ID: %s\n", aclId)
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return acl, err
+	}
+
+	err = json.Unmarshal(aclBytes, &acl)
+	if err != nil {
+		message = fmt.Sprintf("Error Unmarshalling ACL with ID: %s\n", aclId)
+		fmt.Errorf(message)
+		err = errors.New(message)
+		return acl, err
+	}
+
+	return acl, nil
+}
+
+*/
+func getTxCreatorInfo(creator []byte) (string, string, error) {
+	var certASN1 *pem.Block
+	var cert *x509.Certificate
+	var err error
+
+	creatorSerializedId := &msp.SerializedIdentity{}
+	err = proto.Unmarshal(creator, creatorSerializedId)
+	if err != nil {
+		fmt.Printf("Error unmarshalling creator identity: %s\n", err.Error())
+		return "", "", err
+	}
+
+	if len(creatorSerializedId.IdBytes) == 0 {
+		return "", "", errors.New("Empty certificate")
+	}
+	// modify by Cathy - begin
+	//	certASN1, _ = pem.Decode(creatorSerializedId.IdBytes)
+	certStart := bytes.IndexAny(creator, "-----BEGIN")
+	certASN1, _ = pem.Decode(creator[certStart:])
+	// modify by Cathy - end
+	cert, err = x509.ParseCertificate(certASN1.Bytes)
+	if err != nil {
+		return "", "", err
+	}
+
+	//	return creatorSerializedId.Mspid, cert.Issuer.CommonName, nil
+	return creatorSerializedId.Mspid, cert.Subject.CommonName, nil
+}
+
+func (t *MyChaincode) richQuery(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	queryString := args[0] // fmt.Sprintf("{\"selector\":{\"%s\":\"%s\"}}", args[0], args[1])
+	resultsIterator, err := stub.GetQueryResult(queryString)
+	if err != nil {
+		return shim.Error("Rich query failed")
+	}
+	defer resultsIterator.Close()
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"Key\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.Key)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(bytes.Trim(queryResponse.Value, "\x00")))
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+
+	buffer.WriteString("]")
+
+	fmt.Printf("- Rich query assets:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+func (t *MyChaincode) getABAC(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	var buffer bytes.Buffer
+	
+	 id, err := cid.New(stub)
+	 fmt.Println("client ID object:")
+     fmt.Println(id)
+     if err != nil {
+         return shim.Error(err.Error())
+	 }
+	
+	idStr, err := id.GetID()
+	if err != nil{
+		return shim.Error(err.Error())
+	}
+	buffer.WriteString("{\"clientId\":\"" + idStr +"\"")
+
+	mspid, err := id.GetMSPID() // cid.GetMSPID(stub)
+    if err != nil {
+        return shim.Error(err.Error())
+	}
+	buffer.WriteString(", \"mspId\":\""+mspid+"\"")
+
+	cert, err := id.GetX509Certificate() // cid.GetX509Certificate(stub)
+	if err != nil {
+        return shim.Error(err.Error())
+	}
+    fmt.Println("cert:")
+    fmt.Printf("%+v\n", cert)
+    fmt.Println("cert.Extensions :")
+    fmt.Printf("%+v\n", cert.Extensions)
+    fmt.Println("cert.Subject.CommonName:")
+	fmt.Println(cert.Subject.CommonName)
+
+	certStr := fmt.Sprintf("%+v", cert)
+	buffer.WriteString(", cert\":\"" + certStr +"\"")
+
+	val, ok, attrErr := id.GetAttributeValue(args[0]) // cid.GetAttributeValue(stub, args[0])  // "hf.Registrar.Attributes"
+    if attrErr != nil {
+        return shim.Error(attrErr.Error())
+    }
+    if !ok {
+        return shim.Error("The client identity does not possess the attribute:"+ args[0])
+    }
+	buffer.WriteString(", \""+args[0]+"\":\"" + val +"\"}")
+
+	fmt.Printf("- Get ABAC:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
 
 func createIndexHelper(stub shim.ChaincodeStubInterface, demoAsset *DemoAsset) error {
 	var err error = nil

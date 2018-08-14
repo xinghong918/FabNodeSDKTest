@@ -318,3 +318,42 @@ func TestFireCCEvent(t *testing.T) {
 	}
 	t.Log("fireCCEvent invokeResult.Payload: " + string(invokeResult.Payload))
 }
+
+
+func TestRichQuery(t *testing.T) {
+	var err error
+	stub := shim.NewMockStub("mockChaincodeStub", new(MyChaincode))
+	if stub == nil {
+		t.Fatalf("MockStub creation failed")
+	}
+	t.Log("************ Test RichQuery ****************")
+	demoAsset := DemoAsset{"001", "test1", "food", "cathy", true, "2018-05-25", 1502688979}
+	createAsset(t, stub, demoAsset)
+	demoAsset.ID = "002"
+	demoAsset.Name = "test2"
+	createAsset(t, stub, demoAsset)
+	demoAsset.ID = "003"
+	demoAsset.Name = "test3"
+	demoAsset.Type = "drink"
+	createAsset(t, stub, demoAsset)
+
+	invokeFunc := "richQuery"
+	args := [][]byte{[]byte(invokeFunc), []byte("{\"selector\": {\"owner\":\"cathy\"}}")}
+	result := stub.MockInvoke("12345", args)
+	if result.Status != 200 {
+		t.Errorf("Rich Query returned non-OK status, got: %d, want: %d.", result.Status, 200)
+	}
+
+	t.Logf("Rich Query: %s \n", result.GetPayload())
+
+	var resultPayload []DemoAsset // []map[string]interface{}
+	err = json.Unmarshal(result.GetPayload(), &resultPayload)
+	if err != nil {
+		t.Errorf("Unmarshal failed: %s", err)
+	}
+	t.Logf("Total %d of assets! \n", len(resultPayload))
+	if len(resultPayload) != 3 {
+		t.Errorf("Rich Query return wrong number, got: %d, want: %d", len(resultPayload), 3)
+	}
+	//	t.Logf("%s \n", resultPayload[0].Name)
+}
