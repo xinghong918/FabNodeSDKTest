@@ -5,7 +5,8 @@ Hyperledger Fabric SDK v1.0.5 for node.js Samples
 
 ## Function List
   - Enroll Admin User
-  - Register User (optional)
+  - Register User
+     - With ABAC(Attribute-Based Access Control)
   - Create Channel
   - Join Peers to Channel
   - Query Channel
