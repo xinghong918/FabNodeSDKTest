@@ -1,0 +1,11 @@
+{
+    "CC_SRC_PATH": "../artifacts/",
+    "keyValueStore": "./hfc-key-store",
+    "adminPath": "../artifacts/channel/crypto-config/peerOrganizations",
+    "admins": [
+        {
+            "username": "admin",
+            "secret": "adminpw"
+        }
+    ]
+}
