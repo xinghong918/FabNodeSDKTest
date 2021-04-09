@@ -49,7 +49,10 @@ var _main = function () {
     };  
     var peerPemFile = '/OBPFounder-instance-info/artifacts/crypto/peerOrganizations/OBPFounder/tlscacert/OBPFounder-tlscacerts.pem',
         orderPemFile = '/OBPFounder-instance-info/artifacts/crypto/ordererOrganizations/OBPFounder/tlscacert/OBPFounder-tlscacerts.pem';
-    var P2peerTLSPemFile = '/minifab/keyfiles/peerOrganizations/org1.example.com/tlsca/tlsca0.org1.example.com-cert.pem';
+
+    var P2adminPemFile = '/minifab-asia/keyfiles/peerOrganizations/xh.cloudns.asia/msp/admincerts/Admin@org1.example.com-cert.pem';
+    var P2caPemFile = '/minifab-asia/keyfiles/peerOrganizations/xh.cloudns.asia/msp/cacerts/ca0.org1.example.com-cert.pem';
+    var P2tlsPemFile = '/minifab/keyfiles/peerOrganizations/org1.example.com//msp/tlscacerts/tlsca0.org1.example.com-cert.pem';
 
     var caURL = 'https://obpfounder-xxx.oraclecloud.com:7443';       // Founder ca
     var peer0URL = 'grpcs://obpfounder-xxx.oraclecloud.com:20009',   // Founder peer0
@@ -63,6 +66,10 @@ var _main = function () {
 
     new Promise((resolve, reject) => {
         switch (testType) {
+            // Generate the JSON file for adding New Org to OBP
+            case 'genOrgJSON':
+                obptools.genNewOrgJSONFile('org1-example-com', P2adminPemFile, P2caPemFile, P2tlsPemFile);
+                break;
             //  Enroll user: Admin
             case 'enrollAdminUser':
                 // function(userName, mspid, ca_url, tlsPemFile) 
@@ -82,7 +89,7 @@ var _main = function () {
                 enrollAdmin.getAdminUser('hlfAdmin', 'org1-example-com', P2caURL).then(() => {
                     // function(channelName, peerURL, chaincodeName, fcn, args, adminUser, peerTlsPemFile)
                     query.queryChaincode('mychannel', P2peer0URL, 
-                        'mycc', 'query', ['b'], 'hlfAdmin', P2peerTLSPemFile).then(resolve, reject);
+                        'mycc', 'query', ['b'], 'hlfAdmin', P2tlsPemFile).then(resolve, reject);
                 });
                 break;
             // inovke transaction
@@ -91,14 +98,14 @@ var _main = function () {
                 //    peerTlsPemFile, orderTlsPemFile)
                 invoke.invokeChaincode('mychannel', [P2peer0URL, peer0URL], orderURL,
                     'mycc', 'move', ["b", "a", "10"], 'hlfAdmin', 
-                    [P2peerTLSPemFile, peerPemFile], orderPemFile).then(resolve, reject);
+                    [P2tlsPemFile, peerPemFile], orderPemFile).then(resolve, reject);
                 break;
             // Install Chaincode
             case 'installCC':
                 // function(peerURLs, chaincodePath, chaincodeName, chaincodeVersion, adminUser, mspID, adminCerts, peerTlsPemFile)
                 // install on participant
                 installCC.installChaincode([P2peer0URL],
-                    'github.com/example_cc', 'mycc', 'v1', 'hlfAdmin', 'org1-example-com', P2adminCerts, P2peerTLSPemFile).then(resolve, reject);
+                    'github.com/example_cc', 'mycc', 'v1', 'hlfAdmin', 'org1-example-com', P2adminCerts, P2tlsPemFile).then(resolve, reject);
                 break;
             // Instantiate Chaincode
             case 'activateCC':
@@ -132,7 +139,7 @@ var _main = function () {
                 instantiateCC.instantiateChaincode('mychannel', 
                     [P2peer0URL], orderURL, 
                     'mycc', 'v1', null, ["a", "600", "b", "300"], endorsementPolicy, 'hlfAdmin', 'org1-example-com', P2adminCerts,
-                    P2peerTLSPemFile, orderPemFile).then(resolve, reject);
+                    P2tlsPemFile, orderPemFile).then(resolve, reject);
                 break;
                 // Upgrade Chaincode
             case 'upgradeCC':
@@ -164,7 +171,7 @@ var _main = function () {
                  */
                 upgradeCC.upgradeChaincode('mychannel', [P2peer0URL], orderURL, 'mycc', 'v2', 
                     null, null, endorsementPolicy, 'hlfAdmin', 'org1-example-com', P2adminCerts,
-                    P2peerTLSPemFile, orderPemFile).then(resolve, reject);
+                    P2tlsPemFile, orderPemFile).then(resolve, reject);
 
                 break;
                 // Create Channels
@@ -199,14 +206,14 @@ var _main = function () {
             // query Channel
             case 'queryChannel':
                 // function(channelName, peerURL, adminUser, peerTlsPemFile)
-                query.getChainInfo('mychannel', P2peer0URL, 'hlfAdmin', P2peerTLSPemFile).then(resolve, reject);
+                query.getChainInfo('mychannel', P2peer0URL, 'hlfAdmin', P2tlsPemFile).then(resolve, reject);
                 break;
             // join Channel, must use Founder's orderer url, can't use participant's orderer
             case 'joinChannel':
                 // function(channelName, peerURLs, orderURL, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile)
                 join.joinChannel('mychannel', 
                 [P2peer0URL], orderURL,
-                'hlfAdmin', 'org1-example-com', P2adminCerts, P2peerTLSPemFile, orderPemFile).then(resolve, reject);
+                'hlfAdmin', 'org1-example-com', P2adminCerts, P2tlsPemFile, orderPemFile).then(resolve, reject);
                 // break;
             // Chaincode Event
             // case 'ccEvent':

@@ -1,10 +1,5 @@
 'use strict';
 /*
-* Copyright IBM Corp All Rights Reserved
-*
-* SPDX-License-Identifier: Apache-2.0
-*/
-/*
  * Register and Enroll a user
  */
 var log4js = require('log4js');

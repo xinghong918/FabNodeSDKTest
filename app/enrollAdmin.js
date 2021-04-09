@@ -1,10 +1,5 @@
 'use strict';
 /*
-* Copyright IBM Corp All Rights Reserved
-*
-* SPDX-License-Identifier: Apache-2.0
-*/
-/*
  * Enroll the admin user
  */
 var log4js = require('log4js');
@@ -15,6 +10,7 @@ var path = require('path');
 var util = require('util');
 var os = require('os');
 var fs = require('fs-extra');
+const {execSync} = require('child_process');
 var logger = log4js.getLogger('EnrollAdmin');
 //logger.setLevel('DEBUG');
 logger.level = 'DEBUG';
@@ -86,6 +82,7 @@ var getAdminUser = function (userName, mspid, ca_url, tlsPemFile) {
                 });
             }
         }).then(() => {
+            saveCertPemFile(admin_user, store_path + "/" + userName + ".pem");
             logger.info('Assigned the admin user to the fabric client ::' + admin_user.toString());
             resolve();
         }).catch((err) => {
@@ -93,6 +90,17 @@ var getAdminUser = function (userName, mspid, ca_url, tlsPemFile) {
             reject();
         });
     });
+};
+
+
+var saveCertPemFile = function(admin_user, certpem_file_path){
+    let cert_pem = admin_user.getIdentity()._certificate;
+    //   logger.info('enrollment.identity.certificate: ', cert_pem);
+    fs.writeFileSync(certpem_file_path, cert_pem);
+    logger.info("Successfully save the cert pem file here: "+ certpem_file_path);
+    let result = execSync(`openssl x509 -noout -serial -in ${certpem_file_path}`);
+    let serial = result.toString('utf8').split("=")[1].trim()
+    logger.info("Serial Number: " + serial);
 };
 
 exports.getAdminUser = getAdminUser;
