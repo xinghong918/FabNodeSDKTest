@@ -10,6 +10,7 @@ var logger = log4js.getLogger('Main');
 //logger.setLevel('DEBUG');
 logger.level = 'DEBUG';
 
+var obptools = require('./app/obp-tool');
 var enrollAdmin = require('./app/enrollAdmin');
 var registerUser = require('./app/registerUser');
 var query = require('./app/query.js');
