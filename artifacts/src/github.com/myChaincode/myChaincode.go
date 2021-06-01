@@ -19,13 +19,23 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/util"
+	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/hyperledger/fabric/protos/peer"
-	"github.com/hyperledger/fabric/core/chaincode/lib/cid"
 )
 
 type MyChaincode struct {
+}
+
+type Marble struct {
+	AssetType string      `json:"AssetType" final:"myChaincode.Marble"`
+	MarbleID  string      `json:"MarbleID" validate:"string" id:"true" mandatory:"true"`
+	Name      string      `json:"Name" mandatory:"true"`
+	Color     string      `json:"Color" validate:"string,regexp=^\\s*(red|blue|green)\\s*$"`
+	Size      string      `json:"Size" validate:"string,regexp=^\\s*(10|20|30)\\s*$"`
+	OwnerID   string      `json:"OwnerID" validate:"string" mandatory:"true"`
+	Metadata  interface{} `json:"Metadata,omitempty"`
 }
 
 type DemoAsset struct {
@@ -115,8 +125,12 @@ func (t *MyChaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 		return t.fireCCEvent(stub, args)
 	} else if function == "richQuery" { // sql-based query
 		return t.richQuery(stub, args)
-	} else if function == "getABAC"	{ // query ABAC
+	} else if function == "getABAC" { // query ABAC
 		return t.getABAC(stub, args)
+	} else if function == "getPrivateData" { // test get private data
+		return t.getPrivateData(stub, args)
+	} else if function == "putPrivateData" { // test put private data
+		return t.putPrivateData(stub, args)
 	}
 
 	if function == "createAcl" || function == "getAcl" || function == "updateAcl" || function == "createDar" || function == "getDar" || function == "getTxCreatorInfo" {
@@ -847,52 +861,115 @@ func (t *MyChaincode) getABAC(stub shim.ChaincodeStubInterface, args []string) p
 	}
 
 	var buffer bytes.Buffer
-	
-	 id, err := cid.New(stub)
-	 fmt.Println("client ID object:")
-     fmt.Println(id)
-     if err != nil {
-         return shim.Error(err.Error())
-	 }
-	
-	idStr, err := id.GetID()
-	if err != nil{
+
+	id, err := cid.New(stub)
+	fmt.Println("client ID object:")
+	fmt.Println(id)
+	if err != nil {
 		return shim.Error(err.Error())
 	}
-	buffer.WriteString("{\"clientId\":\"" + idStr +"\"")
+
+	idStr, err := id.GetID()
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	buffer.WriteString("{\"clientId\":\"" + idStr + "\"")
 
 	mspid, err := id.GetMSPID() // cid.GetMSPID(stub)
-    if err != nil {
-        return shim.Error(err.Error())
+	if err != nil {
+		return shim.Error(err.Error())
 	}
-	buffer.WriteString(", \"mspId\":\""+mspid+"\"")
+	buffer.WriteString(", \"mspId\":\"" + mspid + "\"")
 
 	cert, err := id.GetX509Certificate() // cid.GetX509Certificate(stub)
 	if err != nil {
-        return shim.Error(err.Error())
+		return shim.Error(err.Error())
 	}
-    fmt.Println("cert:")
-    fmt.Printf("%+v\n", cert)
-    fmt.Println("cert.Extensions :")
-    fmt.Printf("%+v\n", cert.Extensions)
-    fmt.Println("cert.Subject.CommonName:")
+	fmt.Println("cert:")
+	fmt.Printf("%+v\n", cert)
+	fmt.Println("cert.Extensions :")
+	fmt.Printf("%+v\n", cert.Extensions)
+	fmt.Println("cert.Subject.CommonName:")
 	fmt.Println(cert.Subject.CommonName)
 
 	certStr := fmt.Sprintf("%+v", cert)
-	buffer.WriteString(", cert\":\"" + certStr +"\"")
+	buffer.WriteString(", cert\":\"" + certStr + "\"")
 
 	val, ok, attrErr := id.GetAttributeValue(args[0]) // cid.GetAttributeValue(stub, args[0])  // "hf.Registrar.Attributes"
-    if attrErr != nil {
-        return shim.Error(attrErr.Error())
-    }
-    if !ok {
-        return shim.Error("The client identity does not possess the attribute:"+ args[0])
-    }
-	buffer.WriteString(", \""+args[0]+"\":\"" + val +"\"}")
+	if attrErr != nil {
+		return shim.Error(attrErr.Error())
+	}
+	if !ok {
+		return shim.Error("The client identity does not possess the attribute:" + args[0])
+	}
+	buffer.WriteString(", \"" + args[0] + "\":\"" + val + "\"}")
 
 	fmt.Printf("- Get ABAC:\n%s\n", buffer.String())
 
 	return shim.Success(buffer.Bytes())
+}
+
+/**
+	{
+        "chaincode": "myChaincode",
+        "args":["getPrivateData", "privateDataCollection", "m_001"],
+        "timeout": 18000
+    }
+**/
+func (t *MyChaincode) getPrivateData(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	var collectionName, marbleID, jsonResp string
+	var err error
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	collectionName = args[0]
+	marbleID = args[1]
+	valAsbytes, err := stub.GetPrivateData(collectionName, marbleID) //get the marble from chaincode state
+
+	if err != nil {
+		jsonResp = "{\"Error\":\"Collection Name is " + collectionName + ". Failed to get state for " + marbleID + "\"}"
+		return shim.Error(jsonResp)
+	} else if valAsbytes == nil {
+		jsonResp = "{\"Error\":\"Collection Name is " + collectionName + ". Marble does not exist: " + marbleID + "\"}"
+		return shim.Error(jsonResp)
+	}
+
+	return shim.Success(valAsbytes)
+}
+
+/**
+	{
+		"txid": "fbd8e60fca1d9adb488f1160c4dd67cc344c086738dbb7f4fcc96091d752c6b2",
+		"nonce": "c29b88bef528baabd17f76338e9357233f980ab01d41ef61",
+		"chaincode": "myChaincode",
+		"args": ["putPrivateData", "privateDataCollection", "{\"MarbleID\":\"m_001\",\"Name\":\"mmm\",\"Color\":\"red\",\"Size\":\"10\", \"OwnerID\": \"ssd\"}"],
+		"timeout": 60000,
+		"sync": true
+	}
+**/
+func (t *MyChaincode) putPrivateData(stub shim.ChaincodeStubInterface, args []string) peer.Response {
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+
+	if len(args[0]) <= 0 {
+		return shim.Error("1st argument must be a non-empty string")
+	}
+	if len(args[1]) <= 0 {
+		return shim.Error("2nd argument must be a non-empty string")
+	}
+
+	marble := &Marble{AssetType: "myChaincode.Marble"}
+	json.Unmarshal([]byte(args[1]), marble)
+
+	// === Save asset to state ===
+	fmt.Println("Put private data, collection: " + string(args[0]) + ", value: " + string(args[1]))
+	err := stub.PutPrivateData(args[0], marble.MarbleID, []byte(args[1]))
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(nil)
 }
 
 func createIndexHelper(stub shim.ChaincodeStubInterface, demoAsset *DemoAsset) error {

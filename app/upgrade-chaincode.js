@@ -12,9 +12,10 @@ var util = require('util');
 var logger = log4js.getLogger('Upgrade-Chaincode');
 //logger.setLevel('DEBUG');
 logger.level = 'DEBUG';
+var timeout = 180*1000;
 
 var upgradeChaincode = function (channelName, peerURLs, orderURL, chaincodeName, chaincodeVersion, 
-	functionName, args, endorsementPolicy, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile) {
+	functionName, args, endorsementPolicy, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile, collectionsConfigPath) {
 	logger.info('============ Upgrade chaincode on organization ============');
 
 	var client = new Fabric_Client();
@@ -96,6 +97,10 @@ var upgradeChaincode = function (channelName, peerURLs, orderURL, chaincodeName,
 				args: args,
 				txId: tx_id
 			};
+			if(collectionsConfigPath){
+				request["collections-config"] = path.join(__dirname, collectionsConfigPath);
+			}
+
 
 			if (functionName)
 				request.fcn = functionName;
@@ -103,7 +108,7 @@ var upgradeChaincode = function (channelName, peerURLs, orderURL, chaincodeName,
 			if (endorsementPolicy)
 				request["endorsement-policy"] = endorsementPolicy;
 
-			return channel.sendUpgradeProposal(request);
+			return channel.sendUpgradeProposal(request, timeout);
 		}, (err) => {
 			let errMsg = 'Failed to initialize the channel';
 			logger.error(errMsg);
@@ -135,7 +140,7 @@ var upgradeChaincode = function (channelName, peerURLs, orderURL, chaincodeName,
 					proposal: proposal
 				};
 
-				return channel.sendTransaction(request, 60000).then((results) => {
+				return channel.sendTransaction(request, timeout).then((results) => {
 					logger.debug('Successfully upgrade chaincode to ' + chaincodeVersion + '!');
 					resolve(results[0]); // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 				}).catch((err) => {

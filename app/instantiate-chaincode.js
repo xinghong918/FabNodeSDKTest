@@ -12,9 +12,10 @@ var util = require('util');
 var logger = log4js.getLogger('Instantiate-Chaincode');
 //logger.setLevel('DEBUG');
 logger.level = 'DEBUG';
+var timeout = 180*1000;
 
 var instantiateChaincode = function (channelName, peerURLs, orderURL, chaincodeName, chaincodeVersion, functionName, 
-		args, endorsementPolicy, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile) {
+		args, endorsementPolicy, adminUser, mspID, adminCerts, peerTlsPemFile, orderTlsPemFile, collectionsConfigPath) {
 	logger.info('============ Instantiate chaincode on organization ============');
 
 	var client = new Fabric_Client();
@@ -93,6 +94,9 @@ var instantiateChaincode = function (channelName, peerURLs, orderURL, chaincodeN
 				args: args,
 				txId: tx_id
 			};
+			if(collectionsConfigPath){
+				request["collections-config"] = path.join(__dirname, collectionsConfigPath);
+			}
 
 			if (functionName)
 				request.fcn = functionName;
@@ -100,7 +104,7 @@ var instantiateChaincode = function (channelName, peerURLs, orderURL, chaincodeN
 			if (endorsementPolicy)
 				request["endorsement-policy"] = endorsementPolicy;
 
-			return channel.sendInstantiateProposal(request);
+			return channel.sendInstantiateProposal(request, timeout);
 		}, (err) => {
 			let errMsg = 'Failed to initialize the channel';
 			logger.error(errMsg);
@@ -132,7 +136,7 @@ var instantiateChaincode = function (channelName, peerURLs, orderURL, chaincodeN
 					proposal: proposal
 				};
 				
-				return channel.sendTransaction(request).then((results) => {
+				return channel.sendTransaction(request, timeout).then((results) => {
 					logger.debug('Successfully instantiate chaincode!');
 					resolve(results[0]); // the first returned value is from the 'sendPromise' which is from the 'sendTransaction()' call
 				}).catch((err) => {

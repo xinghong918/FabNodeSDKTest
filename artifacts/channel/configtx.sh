@@ -8,3 +8,6 @@ $CFG_BIN_PATH/configtxgen -profile ObcsChannelCreatProfile -channelID $CHANNEL_N
 # curl -X POST --data-binary @channel.tx http://localhost:7059/protolator/decode/common.Envelope > channel.json
 
 
+#Update Anchor peers, first
+configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./config/myfabric_anchors.tx -channelID xh -asOrg myfabric
+

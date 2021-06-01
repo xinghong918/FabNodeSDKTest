@@ -11,6 +11,7 @@ var fs = require('fs-extra');
 var logger = log4js.getLogger('Invoke');
 //logger.setLevel('DEBUG');
 logger.level = 'DEBUG';
+var timeout = 180*1000;
 
 var invokeChaincode = function (channelName, peerURLs, orderURL, chaincodeName, fcn, args, adminUser,
 	peerTlsPemFile, orderTlsPemFile) {
@@ -90,7 +91,7 @@ var invokeChaincode = function (channelName, peerURLs, orderURL, chaincodeName, 
 			};
 
 			// send the transaction proposal to the peers
-			return channel.sendTransactionProposal(request);
+			return channel.sendTransactionProposal(request, timeout);
 		}).then((results) => {
 			var proposalResponses = results[0];
 			var proposal = results[1];
@@ -156,7 +157,7 @@ var invokeChaincode = function (channelName, peerURLs, orderURL, chaincodeName, 
 					eh.connect(true);
 					eventPromises.push(txPromise);
 				});
-				var sendPromise = channel.sendTransaction(request);
+				var sendPromise = channel.sendTransaction(request, timeout);
 
 				return Promise.all([sendPromise].concat(eventPromises));
 			} else {
