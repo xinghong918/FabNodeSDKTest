@@ -11,6 +11,7 @@ Hyperledger Fabric SDK v1.4.7 for node.js Samples
 
 
 ## Function List
+  - Generate OBP Org JSON file
   - Enroll Admin User
   - Register User
      - With ABAC(Attribute-Based Access Control)
