@@ -70,6 +70,7 @@ Hyperledger Fabric SDK v1.4.7 for node.js Samples
       ```sudo cp vars/keyfiles/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/admincerts/Admin@org1.example.com-cert.pem vars/keyfiles/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/msp/admincerts/```
 
       ```sudo rm vars/node_vars.json```
+      
       ```sudo rm vars/run/peer0.org1.example.com.env vars/run/peer1.org1.example.com.env```
 
    5. minifab netup
