@@ -57,7 +57,7 @@ Hyperledger Fabric SDK v1.4.7 for node.js Samples
       minifab netup -e 7788 -i 1.4.7 -o org1.example.com
       ```
 
-#### Extend peer of Minifab:
+#### Minifab增加peer:
    1. 在minifab运行中的状态下：spec.yaml中加入新的peer
    2. ```minifab down```
    3. vars/crypto-config.yaml增加新的peer
@@ -66,6 +66,7 @@ Hyperledger Fabric SDK v1.4.7 for node.js Samples
       ```sudo /home/opc/cathy/workspace/go/src/github.com/fabric-samples-1.4/bin/cryptogen extend --input=vars/keyfiles --config=vars/crypto-config.yaml```
      
       缺失的admin cert可以从其它peer上考过来：
+      
       ```sudo cp vars/keyfiles/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/admincerts/Admin@org1.example.com-cert.pem vars/keyfiles/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/msp/admincerts/```
 
       ```sudo rm vars/node_vars.json```
