@@ -62,6 +62,7 @@ Hyperledger Fabric SDK v1.4.7 for node.js Samples
    2. ```minifab down```
    3. vars/crypto-config.yaml增加新的peer
    4. 生成新增peer的证书信息: 
+      
       ```sudo /home/opc/cathy/workspace/go/src/github.com/fabric-samples-1.4/bin/cryptogen extend --input=vars/keyfiles --config=vars/crypto-config.yaml```
      
       缺失的admin cert可以从其它peer上考过来：
